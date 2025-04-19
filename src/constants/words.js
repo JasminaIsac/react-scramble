@@ -1,4 +1,4 @@
-export const words = [
+const words = [
     "FUSS",
     "IMPLICIT",
     "PROSECUTION",
@@ -10,3 +10,5 @@ export const words = [
     "RUGBY",
     "REGISTER",
 ];
+
+export default words;
