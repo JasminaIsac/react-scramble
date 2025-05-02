@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback} from "react";
 import EmojiImg from "./components/EmojiImg";
 import words from "./constants/words";
 import LetterCard from "./components/LetterCard";
-import smile from "./assets/smile.png";
-import noMouth from "./assets/no-mouth.png";
-import sad from "./assets/sad.png";
 import Result from "./components/Result";
+import {images, status} from "./helpers/constants";
 
 function App() {
   const [currentWord, setCurrentWord] = useState(() => {
@@ -13,48 +11,44 @@ function App() {
       return word;
   });
 
-  const images = [smile, noMouth, sad];
-
   const [currentEmoji, setCurrentEmoji] = useState(images[0]);
-  const letters = currentWord.split("");
+  const letters = useMemo(()=>currentWord.split(""),[currentWord]);
 
   const [randomizedLetters, setRandomizedLetters] = useState([]);
   const [word, setWord] = useState(() => Array(letters.length).fill("_"));
   const [disabledIndexes, setDisabledIndexes] = useState([]);
   const [currentMove, setCurrentMove] = useState(0);
-  const [hasWon, setHasWon] = useState(false);
-  const [hasLost, setHasLost] = useState(false);
+  const [gameStatus, setGameStatus] = useState(status.PLAYING);
 
-  useEffect(() => {
-    initializeGame();
-  }, []);
-
-  const initializeGame = () => {
+  const initializeGame = useCallback(() => {
     const newWord = words[Math.floor(Math.random() * words.length)];
     const newRandomizedLetters = [...newWord.split("")].sort(() => Math.random() - 0.5);
-    
+  
     setCurrentWord(newWord);
     setRandomizedLetters(newRandomizedLetters);
     setWord(Array(newWord.length).fill("_"));
     setDisabledIndexes([]);
     setCurrentMove(0);
     setCurrentEmoji(images[0]);
-    setHasWon(false);
-    setHasLost(false);
-  };
+    setGameStatus(status.PLAYING);
+  }, []);
   
-  
+  useEffect(() => {
+    initializeGame();
+  }, [initializeGame]);
+
+
   const isWordComplete = (wordArray) => {
     return !wordArray.includes("_");
   };
     
   const checkWord = (wordArray) => {
     if (wordArray.join("") === currentWord) {
-      setHasWon(true);
+      setGameStatus(status.WIN);
       setCurrentEmoji(images[0]);
     } else {
       if(currentMove === 2){
-        setHasLost(true);
+        setGameStatus(status.LOSE);
         setCurrentEmoji(images[2]); 
       } else {
         console.log(currentMove, currentEmoji);
@@ -69,7 +63,7 @@ function App() {
       
 
   const handleLetterClick = (letter, index) => {
-    if (hasWon || hasLost) return;
+    if (gameStatus!== status.PLAYING ) return;
 
     const newWord = [...word];
     const emptyIndex = newWord.findIndex((l) => l === "_");
@@ -88,36 +82,43 @@ function App() {
 
   return (
     <div>
-      {hasWon
-        ? <Result title = "YOU WIN" hasWon = {true} image = {currentEmoji} currentWord = {currentWord} onClick = {initializeGame} />
-        : hasLost
-        ? <Result title = "YOU LOSE" hasWon = {false} image = {currentEmoji} currentWord = {currentWord} onClick = {initializeGame} />
-        : <div className="flex flex-col justify-center items-center p-4 mb-16">
-        <h1 className="text-4xl font-bold mb-4 mt-4">UNSCRAMBLE THE WORD</h1>
-        <EmojiImg img={currentEmoji} />
-        <div className="flex mb-4">
-          {word.map((letter, index) => (
-            <span
-              className="w-10 h-20 flex items-center justify-center text-3xl font-semibold"
-              key={index}
-            >
-              {letter}
-            </span>
-          ))}
+      {gameStatus !== status.PLAYING ? (
+        <Result
+          title={`YOU ${gameStatus}`}
+          hasWon={gameStatus === status.WIN}
+          image={currentEmoji}
+          currentWord={currentWord}
+          onClick={initializeGame}
+        />
+      ) : (
+        <div className="flex flex-col justify-center items-center p-4 mb-16">
+          <h1 className="text-4xl font-bold mb-4 mt-4">UNSCRAMBLE THE WORD</h1>
+          <EmojiImg img={currentEmoji} />
+          <div className="flex mb-4">
+            {word.map((letter, index) => (
+              <span
+                className="w-10 h-20 flex items-center justify-center text-3xl font-semibold"
+                key={index}
+              >
+                {letter}
+              </span>
+            ))}
+          </div>
+          <div className="flex">
+            {randomizedLetters.map((letter, index) => (
+              <LetterCard
+                key={index}
+                letter={letter}
+                onClick={() => handleLetterClick(letter, index)}
+                disabled={disabledIndexes.includes(index)}
+              />
+            ))}
+          </div>
         </div>
-        <div className="flex">
-          {randomizedLetters.map((letter, index) => (
-            <LetterCard
-              key={index}
-              letter={letter}
-              onClick={() => handleLetterClick(letter, index)}
-              disabled={disabledIndexes.includes(index)}
-            />
-          ))}
-        </div>
-      </div>}
+      )}
     </div>
   );
+  
 }
 
 export default App;
